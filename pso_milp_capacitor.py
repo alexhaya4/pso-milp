@@ -73,7 +73,8 @@ def build_network(bus_df, branch_df, capacitor_vector=None, cap_map=None):
 
     try:
         pp.runpp(net)
-    except:
+    except Exception as e:
+        print(f"\n[Power Flow Failed] Reason: {e}")
         return 1e6, None, None, None, None, None
 
     total_loss = net.res_line.pl_mw.sum()
@@ -105,7 +106,7 @@ print("\nOptimal Capacitor Locations:")
 print(optimal_locations)
 print(f"Number of Capacitors Installed: {len(optimal_locations)}")
 
-# Step 8: MILP sizing (fixed with binary indicators)
+# Step 8: MILP sizing (fixed with binary indicators and total kvar constraint)
 def optimize_capacitor_sizes(best_pos, cap_options=[0, 50, 100, 150, 200, 300]):
     cap_buses = [bus for i, bus in enumerate(candidate_buses) if best_pos[i] == 1]
     if not cap_buses:
@@ -118,15 +119,20 @@ def optimize_capacitor_sizes(best_pos, cap_options=[0, 50, 100, 150, 200, 300]):
     }
 
     for bus in cap_buses:
-        prob += lpSum(cap_vars[bus]) == 1  # Only one size per bus
+        prob += lpSum(cap_vars[bus]) == 1
 
     total_kvar = lpSum(cap_vars[bus][i] * cap_options[i] for bus in cap_buses for i in range(len(cap_options)))
-    prob += total_kvar  # Objective: minimize total kvar installed
+    prob += total_kvar
+    prob += total_kvar >= 300
 
     prob.solve(PULP_CBC_CMD(msg=False))
 
+    if prob.status != 1:
+        print("\n[MILP] No feasible solution found. Assigning default size of 100 kVAR.")
+        return {bus: 100 for bus in cap_buses}
+
     return {
-        bus: sum(cap_options[i] * cap_vars[bus][i].value() for i in range(len(cap_options)))
+        bus: sum(cap_options[i] * round(cap_vars[bus][i].value()) for i in range(len(cap_options)))
         for bus in cap_buses
     }
 
@@ -137,11 +143,15 @@ for bus, kvar in cap_solution.items():
 
 # Step 9: Final power flow evaluation with optimal locations and sizes
 final_cost, bus_voltages, line_losses, final_loss, final_dev, final_viol = build_network(bus_df, branch_df, best_pos, cap_solution)
-print(f"\nFinal Network Cost: {final_cost:.4f}")
-print(f"Total Power Loss (MW): {final_loss:.4f}")
-print(f"Total Voltage Deviation (p.u.): {final_dev:.4f}")
-print(f"Voltage Violations (buses outside 0.95–1.05 p.u.): {final_viol}")
-print("\nVoltage Profile:")
-print(bus_voltages[['bus', 'vm_pu']])
-print("\nLine Losses (MW):")
-print(line_losses[['from_bus', 'to_bus', 'pl_mw']])
+
+if final_loss is not None:
+    print(f"\nFinal Network Cost: {final_cost:.4f}")
+    print(f"Total Power Loss (MW): {final_loss:.4f}")
+    print(f"Total Voltage Deviation (p.u.): {final_dev:.4f}")
+    print(f"Voltage Violations (buses outside 0.95–1.05 p.u.): {final_viol}")
+    print("\nVoltage Profile:")
+    print(bus_voltages[['bus', 'vm_pu']])
+    print("\nLine Losses (MW):")
+    print(line_losses[['from_bus', 'to_bus', 'pl_mw']])
+else:
+    print("\n[Final Evaluation] Power flow solution failed. Please inspect capacitor configuration and connectivity.")

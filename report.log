@@ -5058,3 +5058,5 @@ Please install numba to gain a massive speedup.
 2025-05-13 12:21:06,243 - pyswarms.discrete.binary - INFO - Optimization finished | best cost: 1000000.0, best pos: [1 1 0 1 0 1 1 0 1 0 1 0 1 0 0 1 1 0]
 2025-05-13 12:26:53,946 - pyswarms.discrete.binary - INFO - Optimize for 30 iters with {'c1': 1.5, 'c2': 1.5, 'w': 0.9, 'k': 3, 'p': 2}
 2025-05-13 12:50:23,416 - pyswarms.discrete.binary - INFO - Optimization finished | best cost: 1000000.0, best pos: [0 1 0 0 1 0 1 1 0 1 0 0 0 1 0 1 1 0]
+2025-05-13 13:05:03,713 - pyswarms.discrete.binary - INFO - Optimize for 30 iters with {'c1': 1.5, 'c2': 1.5, 'w': 0.9, 'k': 3, 'p': 2}
+2025-05-13 13:30:47,681 - pyswarms.discrete.binary - INFO - Optimization finished | best cost: 1000000.0, best pos: [0 0 1 0 1 0 0 1 0 0 1 0 1 1 0 1 0 0]
